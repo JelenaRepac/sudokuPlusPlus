@@ -13,4 +13,6 @@
    [ring/ring-core "1.6.3"]
    [ring/ring-jetty-adapter "1.6.3"]
    [ring/ring-defaults "0.4.0"]
-   [clj-http "3.12.0"]])
+   [clj-http "3.12.0"]
+   [org.clojure/java.jdbc "0.7.12"]
+   [mysql/mysql-connector-java "8.0.23"]])
