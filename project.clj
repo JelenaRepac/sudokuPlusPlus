@@ -12,4 +12,5 @@
    [cheshire "5.12.0"]
    [ring/ring-core "1.6.3"]
    [ring/ring-jetty-adapter "1.6.3"]
-   [ring/ring-defaults "0.4.0"]])
+   [ring/ring-defaults "0.4.0"]
+   [clj-http "3.12.0"]])

@@ -1,4 +1,7 @@
 (ns sudoku-solver.if-valid)
+
+--Checking if the sudoku board is valid
+
 (defn valid? [x]
   (let [distinct-numbers(set x)]
     (= 9 (count x))
