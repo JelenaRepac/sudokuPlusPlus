@@ -1,6 +1,6 @@
-(ns sudoku-solver.if-valid)
+(ns sudoku-solver.if-valid
+  (:require [sudoku-solver.core :refer :all]))
 
---Checking if the sudoku board is valid
 
 (defn valid? [x]
   (let [distinct-numbers(set x)]
@@ -19,7 +19,31 @@
         (recur (inc grid-index) (and result (valid? (flatten subgrid)))))
       result)))
 
+(defn cell-valid? [board row col value]
+  (let [current-row (get board row)
+        current-column (map #(nth % col) board)
+        current-subgrid (sudoku-solver.core/get-square board col row)]
+    (println "Current Row:" current-row)
+    (println "Current Column:" current-column)
+    (println "Current Subgrid:" current-subgrid)
 
+    (and (not= value 0)
+         (not-any? #{value} current-row)
+         (not-any? #{value} current-column)
+         (not-any? #{value} (flatten current-subgrid))
+        )))
+
+(def example-board-1
+  [[1 2 0 4 5 6 7 8 0]
+   [0 5 0 7 0 9 1 2 3]
+   [7 8 0 0 0 3 4 5 6]
+   [2 3 0 0 6 4 8 9 0]
+   [5 6 0 0 9 7 2 3 0]
+   [8 9 0 0 3 1 5 0 0]
+   [3 1 0 0 0 5 9 7 0]
+   [6 4 0 0 0 8 3 1 0]
+   [0 7 8 3 0 2 6 4 5]])
+(cell-valid? example-board-1 0 2 1)
 (defn sudoku-solved? [board]
   (loop [row 0
          column 0
