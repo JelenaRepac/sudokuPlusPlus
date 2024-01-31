@@ -5,7 +5,6 @@
             [clojure.tools.logging :as log]
             [clj-http.client :as client]
             [clojure.java.jdbc :as jdbc]
-            [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
          ))
 (def db-spec
   {:classname   "com.mysql.cj.jdbc.Driver"
@@ -13,6 +12,15 @@
    :subname     "//localhost:3306/sudoku"
    :user        "root"
    :password    "root"})
+;(def demo-settings
+;  {
+;   :classname   "org.h2.Driver"
+;   :subprotocol "h2:file"
+;   :subname     (str (System/getProperty "user.dir") "/" "demo")
+;   :user        "sa"
+;   :password    ""
+;   }
+;  )
 (defn serialize [x]
   (json/generate-string x))
 (defn insert-sudoku-board [board solved-board difficulty]
@@ -99,14 +107,35 @@
             (recur (inc count)))
           (throw (Exception. (str "Failed to fetch Sudoku board. Status: " (:status response))))))
       (println "Fetched and saved" n "Sudoku boards."))))
+(def cors-headers
+  {"Access-Control-Allow-Origin"  "http://localhost:3000"
+   "Access-Control-Allow-Headers" "Content-Type"
+   "Access-Control-Allow-Methods" "GET, POST, OPTIONS"
+   "Access-Control-Allow-Credentials" "true"})
+
+(defn check-cell-value [request]
+  (let [params (:params request)
+        board (get params "board")
+        row-index (get params "rowIndex" 0)
+        col-index (get params "columnIndex" 0)
+        value (get params "value" 0)
+        result (sudoku-solver.if-valid/cell-valid? board row-index col-index value)]
+    {:status 200
+     :headers {"Content-Type" "application/json"}
+     :body (json/generate-string {:board board
+                                  :rowIndex row-index
+                                  :columnIndex col-index
+                                  :value value
+                                  :result result})}))
+
+
+
 
 (defn enable-cors [handler]
   (fn [request]
     (let [response (handler request)]
-      (assoc response
-        :headers (assoc (:headers response) "Access-Control-Allow-Origin" "*")))))
-
-
+      (merge response
+             {:headers (merge (:headers response) cors-headers)}))))
 
 (def app-routes
   (-> (routes
@@ -157,6 +186,29 @@
                                           })
              }
             ))
+        (POST "/check-cell-value" request
+          (let [body (slurp (:body request))
+                params (json/parse-string body true)
+                board (:board params)
+                row-index (:rowIndex params)
+                col-index (:columnIndex params)
+                value (:value params)
+                result (sudoku-solver.if-valid/cell-valid? board row-index col-index value)]
+            {:status 200
+             :headers {"Content-Type" "application/json"}
+             :body (json/generate-string {:board board
+                                          :rowIndex row-index
+                                          :columnIndex col-index
+                                          :value value
+                                          :result result})}))
+        (POST "/if-valid" request
+          (let [body (slurp (:body request))
+                params (json/parse-string body true)
+                board (:board params)
+                result (sudoku-solver.if-valid/sudoku-solved? board )]
+            {:status 200
+             :headers {"Content-Type" "application/json"}
+             :body (json/generate-string {:result result})}))
         )
       (enable-cors)))
 
