@@ -1,5 +1,4 @@
-(ns sudoku-solver.if-valid
-  (:require [sudoku-solver.core :refer :all]))
+(ns sudoku-solver.if-valid)
 
 
 (defn valid? [x]
@@ -19,10 +18,17 @@
         (recur (inc grid-index) (and result (valid? (flatten subgrid)))))
       result)))
 
+(defn get-square [p x y]
+  (let [square-x (* 3 (quot x 3))
+        square-y (* 3 (quot y 3))
+        row1 (subvec (nth p square-y) square-x (+ 3 square-x))
+        row2 (subvec (nth p (+ 1 square-y)) square-x (+ 3 square-x))
+        row3 (subvec (nth p (+ 2 square-y)) square-x (+ 3 square-x))]
+    (concat row1 row2 row3)))
 (defn cell-valid? [board row col value]
   (let [current-row (get board row)
         current-column (map #(nth % col) board)
-        current-subgrid (sudoku-solver.core/get-square board col row)]
+        current-subgrid (get-square board col row)]
     (println "Current Row:" current-row)
     (println "Current Column:" current-column)
     (println "Current Subgrid:" current-subgrid)
@@ -33,17 +39,7 @@
          (not-any? #{value} (flatten current-subgrid))
         )))
 
-(def example-board-1
-  [[1 2 0 4 5 6 7 8 0]
-   [0 5 0 7 0 9 1 2 3]
-   [7 8 0 0 0 3 4 5 6]
-   [2 3 0 0 6 4 8 9 0]
-   [5 6 0 0 9 7 2 3 0]
-   [8 9 0 0 3 1 5 0 0]
-   [3 1 0 0 0 5 9 7 0]
-   [6 4 0 0 0 8 3 1 0]
-   [0 7 8 3 0 2 6 4 5]])
-(cell-valid? example-board-1 0 2 1)
+
 (defn sudoku-solved? [board]
   (loop [row 0
          column 0

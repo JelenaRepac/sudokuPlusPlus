@@ -142,8 +142,7 @@
         (GET "/solved" []
           {:status 200
            :headers {"Content-Type" "application/json"}
-           :body (json/generate-string (:solved-board @app-state)
-                                        )}
+           :body (json/generate-string (:solved-board @app-state))}
           )
         (GET "/board" []
           {:status 200
@@ -209,6 +208,28 @@
             {:status 200
              :headers {"Content-Type" "application/json"}
              :body (json/generate-string {:result result})}))
+
+        (POST "/cell-hints" request
+          (let [body (slurp (:body request))
+                params (json/parse-string body true)
+                board (:board params)
+                row-index (:rowIndex params)
+                col-index (:columnIndex params)
+                result (sudoku-solver.core/valid-numbers board row-index col-index )]
+            {:status 200
+             :headers {"Content-Type" "application/json"}
+             :body (json/generate-string {:result result})}))
+
+        ;; my algorithm
+        ;(POST "/solve-sudoku" request
+        ;  (let [body (slurp (:body request))
+        ;        params (json/parse-string body true)
+        ;        board (:board params)
+        ;      ]
+        ;    (println (sudoku-solver.core/solve board))
+        ;    {:status 200
+        ;     :headers {"Content-Type" "application/json"}
+        ;     :body (json/generate-string (sudoku-solver.core/solve board))}))
         )
       (enable-cors)))
 
