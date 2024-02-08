@@ -1,26 +1,19 @@
 (ns sudoku-solver.controller.sudokuApi
-  (:require [compojure.core :refer :all]
-            [ring.adapter.jetty :as jetty]
-            [cheshire.core :as json]
-            [clojure.tools.logging :as log]
-            [clj-http.client :as client]
-            [clojure.java.jdbc :as jdbc]
-         ))
+         (:require [compojure.core :refer :all]
+                   [ring.adapter.jetty :as jetty]
+                   [cheshire.core :as json]
+                   [clojure.tools.logging :as log]
+                   [clj-http.client :as client]
+                   [clojure.java.jdbc :as jdbc]
+                   [sudoku-solver.algorithms.locked-candidate :refer :all]
+                   ))
 (def db-spec
   {:classname   "com.mysql.cj.jdbc.Driver"
    :subprotocol "mysql"
    :subname     "//localhost:3306/sudoku"
    :user        "root"
    :password    "root"})
-;(def demo-settings
-;  {
-;   :classname   "org.h2.Driver"
-;   :subprotocol "h2:file"
-;   :subname     (str (System/getProperty "user.dir") "/" "demo")
-;   :user        "sa"
-;   :password    ""
-;   }
-;  )
+
 (defn serialize [x]
   (json/generate-string x))
 (defn insert-sudoku-board [board solved-board difficulty]
@@ -28,12 +21,12 @@
                            (let [board-data (serialize board)
                                  solved-board-data (serialize solved-board)
                                  difficulty-data (serialize difficulty)]
-                           (jdbc/insert!
-                             conn
-                             :sudoku_boards ; Change this to your actual table name
-                             {:board board-data
-                              :solved_board solved-board-data
-                              :difficulty difficulty-data}))))
+                             (jdbc/insert!
+                               conn
+                               :sudoku_boards
+                               {:board board-data
+                                :solved_board solved-board-data
+                                :difficulty difficulty-data}))))
 (def app-state (atom {:board nil :solved-board nil :difficulty nil}))
 
 (defn deserialize-board [board-data]
@@ -45,7 +38,7 @@
                                                     ["SELECT * FROM sudoku_boards WHERE difficulty = '\"Hard\"'"])
                                  first-row (rand-nth result)]
                              (reset! app-state {:board (deserialize-board (:board first-row)) :solved-board (deserialize-board (:solved_board first-row)) :difficulty (deserialize-board (:difficulty first-row))})
-                           (println (:solved-board @app-state))
+                             (println (:solved-board @app-state))
                              {:board (deserialize-board (:board first-row))
                               :solved-board (deserialize-board (:solved_board first-row))
                               :difficulty (deserialize-board (:difficulty first-row))})))
@@ -81,8 +74,8 @@
                              (json/parse-string true)
                              (get-in [:newboard :grids 0 :solution]))
             difficulty (-> (:body response)
-                             (json/parse-string true)
-                             (get-in [:newboard :grids 0 :difficulty]))
+                           (json/parse-string true)
+                           (get-in [:newboard :grids 0 :difficulty]))
             ]
         (reset! app-state {:board board :solved-board solved-board :difficulty difficulty})
         (:board @app-state))
@@ -107,6 +100,8 @@
             (recur (inc count)))
           (throw (Exception. (str "Failed to fetch Sudoku board. Status: " (:status response))))))
       (println "Fetched and saved" n "Sudoku boards."))))
+
+
 (def cors-headers
   {"Access-Control-Allow-Origin"  "http://localhost:3000"
    "Access-Control-Allow-Headers" "Content-Type"
@@ -148,21 +143,21 @@
           {:status 200
            :headers {"Content-Type" "application/json"}
            :body (json/generate-string {
-                  :board  (fetch-sudoku-board)
-                  :difficulty (:difficulty @app-state)
-                  })
-          })
-      (GET "/board-hard" []
-        (let [sudoku (fetch-sudoku-board-hard)]
-          {:status 200
-           :headers {"Content-Type" "application/json"}
-           :body (json/generate-string {
-                                        :board  (:board sudoku)
-                                        :difficulty (:difficulty sudoku)
-                                        :solved-board (:solved-board sudoku)
+                                        :board  (fetch-sudoku-board)
+                                        :difficulty (:difficulty @app-state)
                                         })
-           }
-          ))
+           })
+        (GET "/board-hard" []
+          (let [sudoku (fetch-sudoku-board-hard)]
+            {:status 200
+             :headers {"Content-Type" "application/json"}
+             :body (json/generate-string {
+                                          :board  (:board sudoku)
+                                          :difficulty (:difficulty sudoku)
+                                          :solved-board (:solved-board sudoku)
+                                          })
+             }
+            ))
         (GET "/board-medium" []
           (let [sudoku (fetch-sudoku-board-medium)]
             {:status 200
@@ -220,21 +215,53 @@
              :headers {"Content-Type" "application/json"}
              :body (json/generate-string {:result result})}))
 
-        ;; my algorithm
-        ;(POST "/solve-sudoku" request
-        ;  (let [body (slurp (:body request))
-        ;        params (json/parse-string body true)
-        ;        board (:board params)
-        ;      ]
-        ;    (println (sudoku-solver.core/solve board))
-        ;    {:status 200
-        ;     :headers {"Content-Type" "application/json"}
-        ;     :body (json/generate-string (sudoku-solver.core/solve board))}))
-        )
+        ; my algorithm
+        (POST "/solve-sudoku" request
+          (let [body (slurp (:body request))
+                params (json/parse-string body true)
+                board (:board params)
+                filled-cells (sudoku-solver.core/count-filled-cells board)
+                ]
+            (cond
+              (< filled-cells 25)
+              (do
+                (println "hard")
+                {:status 200
+                 :headers {"Content-Type" "application/json"}
+                 :body (json/generate-string (:solved-board @app-state))})
+
+              (< filled-cells 35)
+              (do
+                (println "medium")
+                {:status 200
+                 :headers {"Content-Type" "application/json"}
+                 :body (json/generate-string (sudoku-solver.algorithms.locked-candidate/solve-sudoku board))})
+
+              :else
+              (do
+                (println "easy")
+                {:status 200
+                 :headers {"Content-Type" "application/json"}
+                 :body (json/generate-string (first (sudoku-solver.core/solve board)))}))))
+
+        (POST "/difficulty" request
+          (let [body (slurp (:body request))
+                params (json/parse-string body true)
+                board (:board params)
+                result (sudoku-solver.core/sudoku-difficulty board)
+                ]
+            {:status 200
+             :headers {"Content-Type" "application/json"}
+             :body (json/generate-string result)}
+            ))
+            )
+
+
       (enable-cors)))
 
 
 (defn -main []
+  ;; (fetch-and-save-sudoku-boards 10)
   (log/info "Starting the server on port 8080")
   (jetty/run-jetty app-routes {:port 8080}))
 

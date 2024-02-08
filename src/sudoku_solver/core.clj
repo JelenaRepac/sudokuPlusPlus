@@ -80,12 +80,6 @@
          (filter (fn [num]
                    (not-any? #{num} (concat row-values col-values square-values)))))))
 
-(defn count-valid-numbers-for-zeroes [board]
-  (for [row (range 9)
-        col (range 9)
-        :when (= (get-in board [row col]) 0)]
-    [row col (count (valid-numbers board row col))]))
-
 
 ;;pocinjemo od onih koji imaju samo jednu opciju
 (defn count-valid-numbers [board [row col]]
@@ -95,17 +89,18 @@
 ;;my algorithm
 (defn solve-helper [indexes i new-board]
   (if (= i (count indexes))
-    new-board
+    [new-board]
     (let [sorted-indexes (sort-by #(count-valid-numbers new-board %) indexes)
           current-index (nth sorted-indexes i)
           [row col] current-index
           possible-numbers (valid-numbers new-board row col)]
-      ;;(println "row :" row "col :" col "Possible numbers:" possible-numbers)
       (if (seq possible-numbers)
         (if (= 1 (count possible-numbers))
           (recur indexes (inc i) (assoc-in new-board [row col] (first possible-numbers)))
-          (recur indexes (inc i) new-board))
+          (let [random-solution (rand-nth possible-numbers)]
+            (recur indexes (inc i) (assoc-in new-board [row col] random-solution))))
         (recur indexes (inc i) new-board)))))
+
 (defn solve [board]
   (let [indexes (find-zero-indexes board)]
     (loop [i 0
@@ -113,34 +108,9 @@
       (solve-helper indexes i new-board))
     ))
 
-(def board
-  [[5 3 0 0 7 0 0 0 0]
-   [6 0 0 1 9 5 0 0 0]
-   [0 9 8 0 0 0 0 6 0]
-   [0 0 0 0 6 0 0 0 3]
-   [4 0 0 8 0 3 0 0 1]
-   [7 0 0 0 2 0 0 0 6]
-   [0 6 0 0 0 0 2 8 0]
-   [0 0 0 4 1 9 0 0 5]
-   [0 0 0 0 8 0 0 7 9]])
-(def example-board
-  [[0 0 0 2 6 0 7 0 1]
-   [6 8 0 0 7 0 0 9 0]
-   [1 9 0 0 0 4 5 0 0]
-   [8 2 0 1 0 0 0 4 0]
-   [0 0 4 6 0 2 9 0 0]
-   [0 5 0 0 0 3 0 2 8]
-   [0 0 9 3 0 0 0 7 4]
-   [0 4 0 0 5 0 0 3 6]
-   [7 0 3 0 1 8 0 0 0]])
 
-(lc/solve-sudoku example-board)
 (defn count-filled-cells [board]
   (count (filter #(not= 0 %) (flatten board))))
-
-(defn unique-solutions? [board]
-  ;; You would implement a function to check if the puzzle has a unique solution
-  (rand-nth [true false]))
 
 (defn count-filled-cells-in-block [board row-start col-start]
   (reduce + (for [i (range 3)
@@ -156,22 +126,19 @@
     (if (apply = block-counts)
       "Even distribution"
       "Clustered distribution")))
-(defn sudoku-difficulty [board]
-  (let [filled-cells (count-filled-cells board)
-        distribution (filled-cells-distribution board)]
-    distribution))
 
 (defn sudoku-difficulty [board]
   (let [filled-cells (count-filled-cells board)
-        ;;unique-solution (unique-solutions? board)
         distribution (filled-cells-distribution board)]
     (println distribution)
     (cond
-       (<= filled-cells 20) "Very Hard"
-      (<= filled-cells 35)  "Hard")
-     (<= filled-cells 40)  "Medium")
-      :else "Easy")
-(sudoku-difficulty example-board-1)
+      (and (<= filled-cells 20) (= distribution "Even distribution")) "Very Hard"
+      (and (<= filled-cells 35) (= distribution "Even distribution")) "Hard"
+      (and (<= filled-cells 30) (= distribution "Clustered distribution")) "Hard"
+      (and (<= filled-cells 40) (= distribution "Clustered distribution")) "Medium"
+      (<= filled-cells 45) "Easy"
+      :else "Very Easy")))
+
 (def example-board-1
   [[1 2 0 4 5 6 7 8 0]
    [0 5 0 7 0 9 1 2 3]
@@ -183,7 +150,7 @@
    [6 4 0 0 0 8 3 1 0]
    [0 7 8 3 0 2 6 4 5]])
 
-
+(sudoku-difficulty example-board-1)
 ;;Ukoliko moj algoritam ne resi, pozivamo logic
 (defn check-sudoku [board]
   (if  (if-valid/sudoku-solved? board)

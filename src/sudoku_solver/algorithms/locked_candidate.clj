@@ -52,7 +52,6 @@
             [row col num] single
             updated-board (assoc-in board [row col] num)
             updated-singles (filter #(not= % single) singles)]
-        (println single)
         (recur updated-board
                (concat updated-singles
                        (for [r (range 9)
