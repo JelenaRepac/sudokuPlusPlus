@@ -149,7 +149,7 @@
    [3 1 0 0 0 5 9 7 0]
    [6 4 0 0 0 8 3 1 0]
    [0 7 8 3 0 2 6 4 5]])
-
+(valid-numbers example-board-1 0 2)
 (sudoku-difficulty example-board-1)
 ;;Ukoliko moj algoritam ne resi, pozivamo logic
 (defn check-sudoku [board]
@@ -158,6 +158,46 @@
       (ll/print-sudoku (ll/solve (flatten board)))
     )
   )
+(defn solvable?
+  [sudoku]
+  (let [solution (solve sudoku)]
+    (and (seq solution)
+         (= 1 (count solution)))))
+
+
+(defn generate-sudoku-board []
+  (let [empty-board (vec (repeat 9 (vec (repeat 9 0))))]
+    (loop [board empty-board
+           inserted-numbers 0]
+      (let [unfilled-cells (filter #(= 0 (get-in board %)) (for [i (range 81)] [(quot i 9) (mod i 9)]))
+            shuffled-cells (shuffle unfilled-cells)]
+        (if (>= inserted-numbers 28)
+         (if (empty? (sudoku-solver.algorithms.logic-library/sudokufd (flatten board) ))
+           (recur empty-board 0)
+           board
+           )
+          (let [n (first shuffled-cells)
+                row (first n)
+                col (second n)
+                possible-numbers (valid-numbers board row col)
+                rand-number (if (seq possible-numbers)
+                              (rand-nth possible-numbers)
+                              nil)]
+            (if (> (count possible-numbers) 3)
+              (if (nil? rand-number)
+                (recur board inserted-numbers)
+                (if (sudoku-solver.if-valid/cell-valid? board row col rand-number)
+                  (recur (assoc-in board [row col] rand-number) (inc inserted-numbers))
+                  (recur board inserted-numbers)))
+              (recur empty-board 0))))))))
+;(generate-sudoku-board)
+;(sudoku-solver.algorithms.logic-library/sudokufd (flatten (generate-sudoku-board)))
+
+(defn vector-of-vectors [seq]
+  (->> seq
+       (partition 9) ; Split the sequence into chunks of size 9
+       (mapv vec)))
+
 
 (defn -main []
   (println "\n===================================")

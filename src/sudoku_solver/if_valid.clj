@@ -29,9 +29,6 @@
   (let [current-row (get board row)
         current-column (map #(nth % col) board)
         current-subgrid (get-square board col row)]
-    (println "Current Row:" current-row)
-    (println "Current Column:" current-column)
-    (println "Current Subgrid:" current-subgrid)
 
     (and (not= value 0)
          (not-any? #{value} current-row)

@@ -38,7 +38,6 @@
                                                     ["SELECT * FROM sudoku_boards WHERE difficulty = '\"Hard\"'"])
                                  first-row (rand-nth result)]
                              (reset! app-state {:board (deserialize-board (:board first-row)) :solved-board (deserialize-board (:solved_board first-row)) :difficulty (deserialize-board (:difficulty first-row))})
-                             (println (:solved-board @app-state))
                              {:board (deserialize-board (:board first-row))
                               :solved-board (deserialize-board (:solved_board first-row))
                               :difficulty (deserialize-board (:difficulty first-row))})))
@@ -140,13 +139,17 @@
            :body (json/generate-string (:solved-board @app-state))}
           )
         (GET "/board" []
+        (let [board (sudoku-solver.core/generate-sudoku-board)]
           {:status 200
            :headers {"Content-Type" "application/json"}
            :body (json/generate-string {
-                                        :board  (fetch-sudoku-board)
-                                        :difficulty (:difficulty @app-state)
+                                        :board board
+                                        :difficulty (sudoku-solver.core/sudoku-difficulty board )
                                         })
-           })
+           }
+
+          )
+         )
         (GET "/board-hard" []
           (let [sudoku (fetch-sudoku-board-hard)]
             {:status 200
@@ -222,6 +225,8 @@
                 board (:board params)
                 filled-cells (sudoku-solver.core/count-filled-cells board)
                 ]
+            (println filled-cells)
+            ;; if it is hard get the solved sudoku
             (cond
               (< filled-cells 25)
               (do
@@ -230,13 +235,16 @@
                  :headers {"Content-Type" "application/json"}
                  :body (json/generate-string (:solved-board @app-state))})
 
+              ;; if it is medium, get the algorithm result
               (< filled-cells 35)
               (do
-                (println "medium")
-                {:status 200
-                 :headers {"Content-Type" "application/json"}
-                 :body (json/generate-string (sudoku-solver.algorithms.locked-candidate/solve-sudoku board))})
+                  (println "medium")
+                  {:status 200
+                   :headers {"Content-Type" "application/json"}
+                   :body (json/generate-string  (sudoku-solver.algorithms.logic-library/sudokufd (flatten board)))}
 
+                )
+              ;; get my algorithm result
               :else
               (do
                 (println "easy")
