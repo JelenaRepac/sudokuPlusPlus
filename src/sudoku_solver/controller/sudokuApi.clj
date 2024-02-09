@@ -139,12 +139,13 @@
            :body (json/generate-string (:solved-board @app-state))}
           )
         (GET "/board" []
-        (let [board (sudoku-solver.core/generate-sudoku-board)]
+        (let [board (sudoku-solver.core/generate-sudoku-board (+ 20 (rand-int 21)))
+              difficulty  (sudoku-solver.core/sudoku-difficulty board )]
           {:status 200
            :headers {"Content-Type" "application/json"}
            :body (json/generate-string {
                                         :board board
-                                        :difficulty (sudoku-solver.core/sudoku-difficulty board )
+                                        :difficulty difficulty
                                         })
            }
 
@@ -263,13 +264,10 @@
              :body (json/generate-string result)}
             ))
             )
-
-
       (enable-cors)))
 
-
 (defn -main []
-  ;; (fetch-and-save-sudoku-boards 10)
+  (fetch-and-save-sudoku-boards 10)
   (log/info "Starting the server on port 8080")
   (jetty/run-jetty app-routes {:port 8080}))
 
