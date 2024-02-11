@@ -5,7 +5,6 @@
                    [clojure.tools.logging :as log]
                    [clj-http.client :as client]
                    [clojure.java.jdbc :as jdbc]
-                   [sudoku-solver.algorithms.locked-candidate :refer :all]
                    ))
 (def db-spec
   {:classname   "com.mysql.cj.jdbc.Driver"
@@ -27,11 +26,61 @@
                                {:board board-data
                                 :solved_board solved-board-data
                                 :difficulty difficulty-data}))))
+
+(defn insert-time [initialBoard board time user]
+    (jdbc/with-db-connection [conn db-spec]
+                             (let [initial-board-data (serialize initialBoard)
+                                   board-data (serialize board)
+                                   time-data (serialize time)
+                                   user-data (serialize user)]
+                               (jdbc/insert!
+                                 conn
+                                 :results
+                                 { :initial initial-board-data
+                                  :board board-data
+                                  :time time-data
+                                  :user user-data})))
+    )
+
 (def app-state (atom {:board nil :solved-board nil :difficulty nil}))
 
 (defn deserialize-board [board-data]
   (-> board-data
-      (json/parse-string true)))
+      (json/parse-string true)
+      ))
+
+(defn fetch-best-result []
+  (jdbc/with-db-connection [conn db-spec]
+                           (let [result (jdbc/query conn
+                                                  ["SELECT user,time FROM results WHERE time = (SELECT MIN(time) FROM results) LIMIT 1"]
+                                                  )
+                                 first (first result)]
+                             { :user (deserialize-board (:user first))
+                              :time  (:time first)
+                              }
+                           ))
+  )
+
+
+(defn fetch-leaderboard []
+  (jdbc/with-db-connection [conn db-spec]
+                           (let [result (jdbc/query conn ["SELECT user, time FROM results ORDER BY time ASC LIMIT 3"])
+                                 result-count (count result)
+                                 first-row (if (>= result-count 1) (nth result 0) nil)
+                                 second-row (if (>= result-count 2) (nth result 1) nil)
+                                 third-row (if (>= result-count 3) (nth result 2) nil)]
+                             (println result)
+                             {:first (if first-row
+                                       {:user (deserialize-board (:user first-row))
+                                        :time (-> first-row :time)})
+                              :second (if second-row
+                                        {:user (deserialize-board (:user second-row))
+                                         :time (-> second-row :time)})
+                              :third (if third-row
+                                       {:user (deserialize-board (:user third-row))
+                                        :time (-> third-row :time)})})))
+
+(fetch-leaderboard)
 (defn fetch-sudoku-board-hard []
   (jdbc/with-db-connection [conn db-spec]
                            (let [result (jdbc/query conn
@@ -41,7 +90,6 @@
                              {:board (deserialize-board (:board first-row))
                               :solved-board (deserialize-board (:solved_board first-row))
                               :difficulty (deserialize-board (:difficulty first-row))})))
-
 (defn fetch-sudoku-board-easy  []
   (jdbc/with-db-connection [conn db-spec]
                            (let [result (jdbc/query conn
@@ -139,18 +187,15 @@
            :body (json/generate-string (:solved-board @app-state))}
           )
         (GET "/board" []
-        (let [board (sudoku-solver.core/generate-sudoku-board (+ 20 (rand-int 21)))
-              difficulty  (sudoku-solver.core/sudoku-difficulty board )]
-          {:status 200
-           :headers {"Content-Type" "application/json"}
-           :body (json/generate-string {
-                                        :board board
-                                        :difficulty difficulty
-                                        })
-           }
+            {:status 200
+             :headers {"Content-Type" "application/json"}
+             :body (json/generate-string {
+                                          :board (sudoku-solver.core/generate-sudoku-board)
+                                          })
+             }
+
 
           )
-         )
         (GET "/board-hard" []
           (let [sudoku (fetch-sudoku-board-hard)]
             {:status 200
@@ -219,6 +264,18 @@
              :headers {"Content-Type" "application/json"}
              :body (json/generate-string {:result result})}))
 
+        ;; checking the number count
+        (POST "/number-filled" request
+          (let [body (slurp (:body request))
+                params (json/parse-string body true)
+                board (:board params)
+                n (:n params)
+                result (sudoku-solver.core/number-filled? board n )]
+            (println n result board)
+            {:status 200
+             :headers {"Content-Type" "application/json"}
+             :body (json/generate-string {:result (sudoku-solver.core/number-filled? board n )})}))
+
         ; my algorithm
         (POST "/solve-sudoku" request
           (let [body (slurp (:body request))
@@ -239,10 +296,10 @@
               ;; if it is medium, get the algorithm result
               (< filled-cells 35)
               (do
-                  (println "medium")
-                  {:status 200
-                   :headers {"Content-Type" "application/json"}
-                   :body (json/generate-string  (sudoku-solver.algorithms.logic-library/sudokufd (flatten board)))}
+                (println "medium")
+                {:status 200
+                 :headers {"Content-Type" "application/json"}
+                 :body (json/generate-string  (sudoku-solver.algorithms.logic-library/sudokufd (flatten board)))}
 
                 )
               ;; get my algorithm result
@@ -263,11 +320,45 @@
              :headers {"Content-Type" "application/json"}
              :body (json/generate-string result)}
             ))
-            )
+        (POST "/time" request
+          (let [body (slurp (:body request))
+                params (json/parse-string body true)
+                initialBoard (:initialBoard params)
+                board (:board params)
+                time (:time params)
+                user (:user params)
+                ]
+            (insert-time initialBoard board time user)
+            {:status 200
+             :headers {"Content-Type" "application/json"}
+             :body (json/generate-string time)}
+            ))
+        (GET "/best-result" []
+          (let [result (fetch-best-result)]
+            {:status 200
+             :headers {"Content-Type" "application/json"}
+             :body (json/generate-string {
+                                          :user  (:user result)
+                                          :time (:time result)
+                                          })
+             }
+            ))
+        (GET "/leaderboard" []
+          (let [result (fetch-leaderboard)]
+            {:status 200
+             :headers {"Content-Type" "application/json"}
+             :body (json/generate-string {
+                                          :first (:first result)
+                                          :second (:second result)
+                                          :third (:third result)
+                                          })
+             }
+            ))
+        )
       (enable-cors)))
 
 (defn -main []
-  (fetch-and-save-sudoku-boards 10)
+  ;(fetch-and-save-sudoku-boards 10)
   (log/info "Starting the server on port 8080")
   (jetty/run-jetty app-routes {:port 8080}))
 

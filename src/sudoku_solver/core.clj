@@ -3,7 +3,6 @@
             [sudoku-solver.algorithms.logic-library :as ll]
             [sudoku-solver.if-valid :as if-valid]
             [clojure.core.logic :refer :all]
-            [sudoku-solver.algorithms.locked-candidate :as lc]
             [criterium.core :as criterium]
             )
   (:refer-clojure :exclude [==]))
@@ -149,26 +148,18 @@
    [3 1 0 0 0 5 9 7 0]
    [6 4 0 0 0 8 3 1 0]
    [0 7 8 3 0 2 6 4 5]])
-(valid-numbers example-board-1 0 2)
-(sudoku-difficulty example-board-1)
-;;Ukoliko moj algoritam ne resi, pozivamo logic
-(defn check-sudoku [board]
-  (if  (if-valid/sudoku-solved? board)
-    (println "It is solved")
-      (ll/print-sudoku (ll/solve (flatten board)))
-    )
-  )
 
-(defn generate-sudoku-board [num-initial-cells]
+(defn generate-sudoku-board []
   (let [empty-board (vec (repeat 9 (vec (repeat 9 0))))]
     (loop [board empty-board
            inserted-numbers 0]
       (let [unfilled-cells (filter #(= 0 (get-in board %)) (for [i (range 81)] [(quot i 9) (mod i 9)]))
             shuffled-cells (shuffle unfilled-cells)]
-        (if (>= inserted-numbers num-initial-cells)
-          (if (empty? (sudoku-solver.algorithms.logic-library/sudokufd (flatten board)))
-            (recur empty-board 0)
-            board)
+        (if (>= inserted-numbers 28)
+         (if (empty? (sudoku-solver.algorithms.logic-library/sudokufd (flatten board) ))
+           (recur empty-board 0)
+           board
+           )
           (let [n (first shuffled-cells)
                 row (first n)
                 col (second n)
@@ -183,77 +174,19 @@
                   (recur (assoc-in board [row col] rand-number) (inc inserted-numbers))
                   (recur board inserted-numbers)))
               (recur empty-board 0))))))))
-
-
-
 ;(generate-sudoku-board)
 ;(sudoku-solver.algorithms.logic-library/sudokufd (flatten (generate-sudoku-board)))
+(defn count-number [board n]
+  (loop [row 0
+         total-count 0]
+    (if (< row (count board))
+      (let [row-data (nth board row)]
+        (recur (inc row) (+ total-count (count (filter #(= n %) row-data)))))
+      total-count)))
 
+(defn number-filled? [board n]
+  (= 9 (count-number board n)))
 
-
-(defn -main []
-  (println "\n===================================")
-  (println "SUDOKU ++")
-  (loop []
-    (println "\n===================================")
-    (println "1. Solve your sudoku\n2. Solve our sudoku \n3. Find out difficulty level \n4. Exit")
-    (println "===================================")
-    (print "Select an option: ")
-    (flush)
-    (let [choice (read-line)]
-      (cond
-        (= choice "1")
-        (do (println "Insert 1. row: ")
-            (flush)
-            (let [user-board (read-sudoku)]
-              (print user-board)
-              (check-sudoku (solve user-board))
-              )
-            (recur))
-        (= choice "2")
-        (do (println "\n===================================")
-            (println "1. SUDOKU ++ ALGORITHM\n2. ALGORITHM LOGIC LIBRARY \n")
-            (println "===================================")
-            (print "Select an algorithm: ")
-            (flush)
-            (let [alg (read-line)]
-              (cond
-                (= alg "1")
-                (do (println "Solve our sudoku: ")
-                    (flush)
-                    (print-sudoku board)
-                    (println "Solving our Sudoku board...")
-                    (println "SUDOKU ++ ALGORITHM")
-                    (print-sudoku (solve board))
-                    (time (solve board))
-                    (recur))
-                (= alg "2")
-                (do (println "Solve our sudoku: ")
-                    (flush)
-                    (print-sudoku board)
-                    (println "Solving our Sudoku board...")
-                    (println "ALGORITHM LOGIC LIBRARY")
-                    (time (ll/print-sudoku (ll/solve (into [] (flatten board)))))
-                    (recur))
-                :else
-                (recur))))
-        (= choice "3")
-        (do
-          (println "Find out difficulty level:")
-          (flush)
-          (let [user-board board
-                difficulty (sudoku-difficulty user-board)]
-            (println " SUDOKU")
-            (print-sudoku user-board)
-            (println "#####################################")
-            (println (str "Difficulty Level: " difficulty)))
-          (println "#####################################")
-          (recur))
-        (= choice "4")
-        (do (println "Goodbye!"))
-        :else
-        (do (println "Invalid choice. Try again.")
-            (recur))))))
 
 
 

@@ -1,6 +1,5 @@
 (ns sudoku-solver.if-valid)
 
-
 (defn valid? [x]
   (let [distinct-numbers(set x)]
     (= 9 (count x))

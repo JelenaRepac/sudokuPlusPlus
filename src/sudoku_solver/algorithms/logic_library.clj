@@ -21,6 +21,7 @@
         sqs  (for [x (range 0 9 3)
                    y (range 0 9 3)]
                (get-square rows x y))]
+    (println vars)
     (run 1 [q]
          (== q vars)
          (everyg #(fd/in % (fd/domain 1 2 3 4 5 6 7 8 9)) vars)
