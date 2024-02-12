@@ -1,0 +1,9 @@
+2024-02-12 17:44:14 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "SUDOKU_BOARDS" already exists; SQL statement:
+CREATE TABLE sudoku_boards (id INT AUTO_INCREMENT PRIMARY KEY, board VARCHAR(200), solved_board VARCHAR(200), difficulty VARCHAR(50)) [42101-197]
+2024-02-12 17:44:14 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "RESULTS" already exists; SQL statement:
+CREATE TABLE results (board VARCHAR(200), time DECIMAL(10), user VARCHAR(100), initial VARCHAR(200)) [42101-197]
+2024-02-12 17:45:56 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "SUDOKU_BOARDS" already exists; SQL statement:
+CREATE TABLE sudoku_boards (id INT AUTO_INCREMENT PRIMARY KEY, board VARCHAR(200), solved_board VARCHAR(200), difficulty VARCHAR(50)) [42101-197]

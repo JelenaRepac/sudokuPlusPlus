@@ -3,7 +3,7 @@
             [sudoku-solver.algorithms.logic-library :as ll]
             [sudoku-solver.if-valid :as if-valid]
             [clojure.core.logic :refer :all]
-            [criterium.core :as criterium]
+
             )
   (:refer-clojure :exclude [==]))
 (def board
@@ -101,11 +101,17 @@
         (recur indexes (inc i) new-board)))))
 
 (defn solve [board]
-  (let [indexes (find-zero-indexes board)]
-    (loop [i 0
-           new-board board]
-      (solve-helper indexes i new-board))
-    ))
+  (loop [retry 2
+         retry-board board]
+    (if (pos? retry)
+      (let [indexes (find-zero-indexes retry-board)
+            solutions (loop [i 0
+                             new-board retry-board]
+                        (solve-helper indexes i new-board))]
+        (if (seq solutions)
+          solutions
+          (recur (dec retry) board)))
+      nil)))
 
 
 (defn count-filled-cells [board]
@@ -176,6 +182,11 @@
               (recur empty-board 0))))))))
 ;(generate-sudoku-board)
 ;(sudoku-solver.algorithms.logic-library/sudokufd (flatten (generate-sudoku-board)))
+(defn performance [board]
+  (let [start-time (System/currentTimeMillis)
+        result (solve board)
+        end-time (System/currentTimeMillis)]
+     (- end-time start-time) ))
 (defn count-number [board n]
   (loop [row 0
          total-count 0]

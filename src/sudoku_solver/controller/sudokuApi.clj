@@ -1,17 +1,62 @@
 (ns sudoku-solver.controller.sudokuApi
-         (:require [compojure.core :refer :all]
-                   [ring.adapter.jetty :as jetty]
-                   [cheshire.core :as json]
-                   [clojure.tools.logging :as log]
-                   [clj-http.client :as client]
-                   [clojure.java.jdbc :as jdbc]
-                   ))
+  (:require [compojure.core :refer :all]
+            [ring.adapter.jetty :as jetty]
+            [cheshire.core :as json]
+            [clojure.tools.logging :as log]
+            [clj-http.client :as client]
+            [clojure.java.jdbc :as jdbc]))
+
+
+;;H2 db
 (def db-spec
-  {:classname   "com.mysql.cj.jdbc.Driver"
-   :subprotocol "mysql"
-   :subname     "//localhost:3306/sudoku"
-   :user        "root"
-   :password    "root"})
+  {:classname "org.h2.Driver"
+   :subprotocol "h2:mem"
+   :subname "test-db;DB_CLOSE_DELAY=-1"
+   :user "sa"
+   :password ""
+   })
+
+
+(jdbc/get-connection db-spec)
+
+(jdbc/query db-spec ["SHOW TABLES"])
+
+
+(try
+  (jdbc/execute! db-spec
+                         ["CREATE TABLE sudoku_boards (id SERIAL PRIMARY KEY, board VARCHAR(200), solved_board VARCHAR(200), difficulty VARCHAR(50))"])
+  (catch Exception e
+    (println "Error creating sudoku_boards table:" (.getMessage e))))
+
+
+(try
+  (jdbc/execute! db-spec
+                 ["CREATE TABLE results (board VARCHAR(200), time DECIMAL(10), user VARCHAR(100), initial VARCHAR(200))"])
+  (catch Exception e
+    (println "Error creating results table:" (.getMessage e))))
+
+
+
+;(def db-spec
+;  {:classname   "com.mysql.cj.jdbc.Driver"
+;   :subprotocol "mysql"
+;   :subname     "//localhost:3306/sudoku"
+;   :user        "root"
+;   :password    "root"})
+
+;(try
+;  (jdbc/execute! db-spec
+;                 ["CREATE TABLE sudoku_boards (id INT AUTO_INCREMENT PRIMARY KEY,board VARCHAR(200),solved_board VARCHAR(200),difficulty VARCHAR(50))"])
+;  (catch Exception e
+;    (println "Error creating sudoku_boards table:" (.getMessage e))))
+;
+;(try
+;  (jdbc/execute! db-spec
+;                 ["CREATE TABLE results (board VARCHAR(200),time DECIMAL(10),gamer VARCHAR(100),initial VARCHAR(200))"])
+;  (catch Exception e
+;    (println "Error creating results table:" (.getMessage e))))
+;
+;(jdbc/query db-spec ["SHOW TABLES"])
 
 (defn serialize [x]
   (json/generate-string x))
@@ -80,7 +125,6 @@
                                        {:user (deserialize-board (:user third-row))
                                         :time (-> third-row :time)})})))
 
-(fetch-leaderboard)
 (defn fetch-sudoku-board-hard []
   (jdbc/with-db-connection [conn db-spec]
                            (let [result (jdbc/query conn
@@ -100,6 +144,7 @@
                              {:board (deserialize-board (:board first-row))
                               :solved-board (deserialize-board (:solved_board first-row))
                               :difficulty (deserialize-board (:difficulty first-row))})))
+
 (defn fetch-sudoku-board-medium  []
   (jdbc/with-db-connection [conn db-spec]
                            (let [result (jdbc/query conn
@@ -127,6 +172,7 @@
         (reset! app-state {:board board :solved-board solved-board :difficulty difficulty})
         (:board @app-state))
       (throw (Exception. (str "Failed to fetch Sudoku board. Status: " (:status response)))))))
+
 (defn fetch-and-save-sudoku-boards [n]
   (loop [count 0]
     (if (< count n)
@@ -297,9 +343,11 @@
               (< filled-cells 35)
               (do
                 (println "medium")
+
                 {:status 200
                  :headers {"Content-Type" "application/json"}
-                 :body (json/generate-string  (sudoku-solver.algorithms.logic-library/sudokufd (flatten board)))}
+                 :body (json/generate-string (sudoku-solver.algorithms.logic-library/sudokufd (flatten board))
+                                              )}
 
                 )
               ;; get my algorithm result
@@ -354,12 +402,29 @@
                                           })
              }
             ))
+        (POST "/performance" request
+          (let [body (slurp (:body request))
+                params (json/parse-string body true)
+                board (:board params)
+                filled-cells (sudoku-solver.core/count-filled-cells board)
+                resolved-board (if (>= filled-cells 40) (first(sudoku-solver.core/solve board))
+                                                        nil)
+                result (sudoku-solver.core/performance board)
+                ]
+            {:status 200
+             :headers {"Content-Type" "application/json"}
+             :body (json/generate-string {:performance result
+                                          :resolvedBoard resolved-board})}
+            ))
         )
       (enable-cors)))
 
 (defn -main []
-  ;(fetch-and-save-sudoku-boards 10)
+   ;(fetch-and-save-sudoku-boards 50)
   (log/info "Starting the server on port 8080")
   (jetty/run-jetty app-routes {:port 8080}))
 
 (-main)
+(jdbc/query db-spec ["SELECT * FROM results"])
+
+(jdbc/execute! db-spec ["DELETE FROM results"])
