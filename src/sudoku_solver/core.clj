@@ -3,7 +3,6 @@
             [sudoku-solver.algorithms.logic-library :as ll]
             [sudoku-solver.if-valid :as if-valid]
             [clojure.core.logic :refer :all]
-
             )
   (:refer-clojure :exclude [==]))
 (def board
@@ -88,7 +87,7 @@
 ;;my algorithm
 (defn solve-helper [indexes i new-board]
   (if (= i (count indexes))
-    [new-board]
+    new-board
     (let [sorted-indexes (sort-by #(count-valid-numbers new-board %) indexes)
           current-index (nth sorted-indexes i)
           [row col] current-index
@@ -97,22 +96,20 @@
         (if (= 1 (count possible-numbers))
           (recur indexes (inc i) (assoc-in new-board [row col] (first possible-numbers)))
           (let [random-solution (rand-nth possible-numbers)]
-            (recur indexes (inc i) (assoc-in new-board [row col] random-solution))))
-        (recur indexes (inc i) new-board)))))
+            (solve-helper indexes (inc i) (assoc-in new-board [row col] random-solution))))
+        nil))))
 
 (defn solve [board]
-  (loop [retry 2
-         retry-board board]
-    (if (pos? retry)
-      (let [indexes (find-zero-indexes retry-board)
-            solutions (loop [i 0
-                             new-board retry-board]
-                        (solve-helper indexes i new-board))]
-        (if (seq solutions)
-          solutions
-          (recur (dec retry) board)))
-      nil)))
+  (let [indexes (find-zero-indexes board)]
+    (loop [i 0
+           new-board board]
+      (if-let [solved-board (solve-helper indexes i new-board)]
+        solved-board
+        (recur i (assoc new-board :error "Could not solve"))))))
 
+
+
+(solve board)
 
 (defn count-filled-cells [board]
   (count (filter #(not= 0 %) (flatten board))))
@@ -137,7 +134,7 @@
         distribution (filled-cells-distribution board)]
     (println distribution)
     (cond
-      (and (<= filled-cells 20) (= distribution "Even distribution")) "Very Hard"
+      (<= filled-cells 20) "Very Hard"
       (and (<= filled-cells 35) (= distribution "Even distribution")) "Hard"
       (and (<= filled-cells 30) (= distribution "Clustered distribution")) "Hard"
       (and (<= filled-cells 40) (= distribution "Clustered distribution")) "Medium"

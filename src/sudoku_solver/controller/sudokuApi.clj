@@ -4,9 +4,11 @@
             [cheshire.core :as json]
             [clojure.tools.logging :as log]
             [clj-http.client :as client]
-            [clojure.java.jdbc :as jdbc]))
-
-
+            [clojure.java.jdbc :as jdbc]
+            [sudoku-solver.if-valid]
+            [sudoku-solver.algorithms.logic-library]
+            [sudoku-solver.core])
+  )
 ;;H2 db
 (def db-spec
   {:classname "org.h2.Driver"
@@ -18,23 +20,25 @@
 
 
 (jdbc/get-connection db-spec)
-
 (jdbc/query db-spec ["SHOW TABLES"])
-
-
 (try
   (jdbc/execute! db-spec
-                         ["CREATE TABLE sudoku_boards (id SERIAL PRIMARY KEY, board VARCHAR(200), solved_board VARCHAR(200), difficulty VARCHAR(50))"])
+                 ["CREATE TABLE sudoku_boards
+                 (id SERIAL PRIMARY KEY,
+                 board VARCHAR(200),
+                 solved_board VARCHAR(200),
+                 difficulty VARCHAR(50))"])
   (catch Exception e
     (println "Error creating sudoku_boards table:" (.getMessage e))))
-
-
 (try
   (jdbc/execute! db-spec
-                 ["CREATE TABLE results (board VARCHAR(200), time DECIMAL(10), user VARCHAR(100), initial VARCHAR(200))"])
+                 ["CREATE TABLE results
+                 (board VARCHAR(200),
+                 time DECIMAL(10),
+                 user VARCHAR(100),
+                 initial VARCHAR(200))"])
   (catch Exception e
     (println "Error creating results table:" (.getMessage e))))
-
 
 
 ;(def db-spec
@@ -43,20 +47,6 @@
 ;   :subname     "//localhost:3306/sudoku"
 ;   :user        "root"
 ;   :password    "root"})
-
-;(try
-;  (jdbc/execute! db-spec
-;                 ["CREATE TABLE sudoku_boards (id INT AUTO_INCREMENT PRIMARY KEY,board VARCHAR(200),solved_board VARCHAR(200),difficulty VARCHAR(50))"])
-;  (catch Exception e
-;    (println "Error creating sudoku_boards table:" (.getMessage e))))
-;
-;(try
-;  (jdbc/execute! db-spec
-;                 ["CREATE TABLE results (board VARCHAR(200),time DECIMAL(10),gamer VARCHAR(100),initial VARCHAR(200))"])
-;  (catch Exception e
-;    (println "Error creating results table:" (.getMessage e))))
-;
-;(jdbc/query db-spec ["SHOW TABLES"])
 
 (defn serialize [x]
   (json/generate-string x))
@@ -70,7 +60,8 @@
                                :sudoku_boards
                                {:board board-data
                                 :solved_board solved-board-data
-                                :difficulty difficulty-data}))))
+                                :difficulty difficulty-data})))
+  )
 
 (defn insert-time [initialBoard board time user]
     (jdbc/with-db-connection [conn db-spec]
@@ -85,6 +76,7 @@
                                   :board board-data
                                   :time time-data
                                   :user user-data})))
+  (log/info "User " user " solved sudoku in " time " milliseconds.")
     )
 
 (def app-state (atom {:board nil :solved-board nil :difficulty nil}))
@@ -238,10 +230,7 @@
              :body (json/generate-string {
                                           :board (sudoku-solver.core/generate-sudoku-board)
                                           })
-             }
-
-
-          )
+             })
         (GET "/board-hard" []
           (let [sudoku (fetch-sudoku-board-hard)]
             {:status 200
@@ -329,7 +318,6 @@
                 board (:board params)
                 filled-cells (sudoku-solver.core/count-filled-cells board)
                 ]
-            (println filled-cells)
             ;; if it is hard get the solved sudoku
             (cond
               (< filled-cells 25)
@@ -338,25 +326,20 @@
                 {:status 200
                  :headers {"Content-Type" "application/json"}
                  :body (json/generate-string (:solved-board @app-state))})
-
               ;; if it is medium, get the algorithm result
               (< filled-cells 35)
               (do
                 (println "medium")
-
                 {:status 200
                  :headers {"Content-Type" "application/json"}
-                 :body (json/generate-string (sudoku-solver.algorithms.logic-library/sudokufd (flatten board))
-                                              )}
-
-                )
+                 :body (json/generate-string (sudoku-solver.algorithms.logic-library/sudokufd (flatten board)))})
               ;; get my algorithm result
               :else
               (do
                 (println "easy")
                 {:status 200
                  :headers {"Content-Type" "application/json"}
-                 :body (json/generate-string (first (sudoku-solver.core/solve board)))}))))
+                 :body (json/generate-string  (sudoku-solver.core/solve board))}))))
 
         (POST "/difficulty" request
           (let [body (slurp (:body request))
@@ -407,7 +390,7 @@
                 params (json/parse-string body true)
                 board (:board params)
                 filled-cells (sudoku-solver.core/count-filled-cells board)
-                resolved-board (if (>= filled-cells 40) (first(sudoku-solver.core/solve board))
+                resolved-board (if (>= filled-cells 40) (sudoku-solver.core/solve board)
                                                         nil)
                 result (sudoku-solver.core/performance board)
                 ]
@@ -420,11 +403,10 @@
       (enable-cors)))
 
 (defn -main []
-   ;(fetch-and-save-sudoku-boards 50)
+  (fetch-and-save-sudoku-boards 40)
   (log/info "Starting the server on port 8080")
   (jetty/run-jetty app-routes {:port 8080}))
 
 (-main)
-(jdbc/query db-spec ["SELECT * FROM results"])
-
-(jdbc/execute! db-spec ["DELETE FROM results"])
+;(jdbc/query db-spec ["SELECT * FROM results"])
+;(jdbc/execute! db-spec ["DELETE FROM results"])
