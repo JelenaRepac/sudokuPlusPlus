@@ -245,3 +245,13 @@ Obtains the time required to solve the table using the algorithm.
                                           :resolvedBoard resolved-board})}
             ))
 ```
+
+## Usage
+- Load all from the **SudokuApi.clj** file into the REPL.
+- Run the front application [Sudoku ++](https://github.com/JelenaRepac/sudokuPlusPlusFront) by navigating to its directory and running **npm start** in the command line. 
+
+Great! Your application is ready to go! 
+
+![sd](https://github.com/JelenaRepac/sudokuPlusPlusFront/assets/104914985/c8762a64-9e3f-4de2-b813-a973d79b2613)
+
+**Have fun playing Sudoku ++!**
