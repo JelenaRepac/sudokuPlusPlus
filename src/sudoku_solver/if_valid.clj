@@ -24,6 +24,7 @@
         row2 (subvec (nth p (+ 1 square-y)) square-x (+ 3 square-x))
         row3 (subvec (nth p (+ 2 square-y)) square-x (+ 3 square-x))]
     (concat row1 row2 row3)))
+
 (defn cell-valid? [board row col value]
   (let [current-row (get board row)
         current-column (map #(nth % col) board)
