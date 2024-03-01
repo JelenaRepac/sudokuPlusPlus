@@ -185,6 +185,7 @@
         result (solve board)
         end-time (System/currentTimeMillis)]
      (- end-time start-time) ))
+
 (defn count-number [board n]
   (loop [row 0
          total-count 0]
