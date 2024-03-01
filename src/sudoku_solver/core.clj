@@ -84,6 +84,7 @@
   (let [possible-numbers (valid-numbers board row col)]
     (count possible-numbers)))
 
+
 ;;my algorithm
 (defn solve-helper [indexes i new-board]
   (if (= i (count indexes))
@@ -194,6 +195,7 @@
 
 (defn number-filled? [board n]
   (= 9 (count-number board n)))
+
 
 
 
