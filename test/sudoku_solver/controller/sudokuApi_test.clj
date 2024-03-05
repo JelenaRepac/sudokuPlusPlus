@@ -483,38 +483,178 @@
 
 
                )
-         ;(fact "Returns a 200 response with result check-cell-value when GET /check-cell-value is called"
-         ;      (let [board [[5 3 4 0 7 8 0 0 2]
-         ;                   [6 0 0 1 9 5 0 4 8]
-         ;                   [1 9 8 0 0 2 0 6 0]
-         ;                   [8 0 9 7 6 1 0 2 3]
-         ;                   [4 0 6 8 0 3 7 9 1]
-         ;                   [7 1 0 0 2 0 0 0 6]
-         ;                   [0 6 0 5 0 0 2 8 0]
-         ;                   [0 8 7 4 1 9 6 3 5]
-         ;                   [0 4 5 0 8 6 0 7 9]],
-         ;            row 0,
-         ;            col 0,
-         ;            value 10]
-         ;         (sudoku-solver.if-valid/cell-valid? board row col value))
-         ;      (let [ response (app-routes (mock/request :get "/check-cell-value"))]
-         ;        (-> response :status) => 200
-         ;        (-> response :body) => "{\"board\":[[5,3,4,0,7,8,0,0,2],[6,0,0,1,9,5,0,4,8],[1,9,8,0,0,2,0,6,0],[8,0,9,7,6,1,0,2,3],[4,0,6,8,0,3,7,9,1],[7,1,0,0,2,0,0,0,6],[0,6,0,5,0,0,2,8,0],[0,8,7,4,1,9,6,3,5],[0,4,5,0,8,6,0,7,9]],\"difficulty\":\"Easy\",\"solved-board\":[[5,3,4,6,7,8,9,1,2],[6,7,2,1,9,5,3,4,8],[1,9,8,3,4,2,5,6,7],[8,5,9,7,6,1,4,2,3],[4,2,6,8,5,3,7,9,1],[7,1,3,9,2,4,8,5,6],[9,6,1,5,3,7,2,8,4],[2,8,7,4,1,9,6,3,5],[3,4,5,2,8,6,1,7,9]]}"
-         ;        (-> response :headers ) =>  {"Content-Type" "application/json",
-         ;                                     "Access-Control-Allow-Origin" "http://localhost:3000",
-         ;                                     "Access-Control-Allow-Headers" "Content-Type",
-         ;                                     "Access-Control-Allow-Methods" "GET, POST, OPTIONS",
-         ;                                     "Access-Control-Allow-Credentials" "true"},
-         ;
-         ;        )
-         ;      (jdbc/execute! db-spec ["DELETE FROM sudoku_boards"])
-         ;
-         ;
-         ;      )
+         (facts "check-cell-value function"
+                (fact "Returns a 400 response when request is empty"
+                      (let [request {}]
+                        (check-cell-value request) => {:status 400
+                                                       :headers {"Content-Type" "application/json"}
+                                                       :body "error:Missing or invalid request"}))
 
-         )
+                (fact "Returns a 200 response with result check-cell-value when valid request is provided"
+                      (let [board [[5 3 4 0 7 8 0 0 2]
+                                   [6 0 0 1 9 5 0 4 8]
+                                   [1 9 8 0 0 2 0 6 0]
+                                   [8 0 9 7 6 1 0 2 3]
+                                   [4 0 6 8 0 3 7 9 1]
+                                   [7 1 0 0 2 0 0 0 6]
+                                   [0 6 0 5 0 0 2 8 0]
+                                   [0 8 7 4 1 9 6 3 5]
+                                   [0 4 5 0 8 6 0 7 9]]
+                            row 0
+                            col 0
+                            value 10
+                            body  (json/generate-string {:board board
+                                                                  :rowIndex row
+                                                                  :columnIndex col
+                                                                  :value value})]
+                        (let [response (app-routes (mock/request :post "/check-cell-value" body))]
+                          (-> response :status) => 200
+                          (-> response :body) => (json/generate-string {:board board
+                                                                        :rowIndex row
+                                                                        :columnIndex col
+                                                                        :value value
+                                                                        :result true})
+                          (-> response :headers "Content-Type") => "application/json")))
 
-  )
+
+                )
+         (facts "Testing /best-result route "
+                (fact "NO results in DB"
+               (let [ response (app-routes (mock/request :get "/best-result"))]
+                 (-> response :status) => 200
+                 (-> response :body) => "{\"user\":null,\"time\":null}"
+                 (-> response :headers ) =>  {"Content-Type" "application/json",
+                                              "Access-Control-Allow-Origin" "http://localhost:3000",
+                                              "Access-Control-Allow-Headers" "Content-Type",
+                                              "Access-Control-Allow-Methods" "GET, POST, OPTIONS",
+                                              "Access-Control-Allow-Credentials" "true"},
+                 )
+                      )
+                (fact "With result"
+                      (let [board [[5 3 4 0 7 8 0 0 2]
+                                   [6 0 0 1 9 5 0 4 8]
+                                   [1 9 8 0 0 2 0 6 0]
+                                   [8 0 9 7 6 1 0 2 3]
+                                   [4 0 6 8 0 3 7 9 1]
+                                   [7 1 0 0 2 0 0 0 6]
+                                   [0 6 0 5 0 0 2 8 0]
+                                   [0 8 7 4 1 9 6 3 5]
+                                   [0 4 5 0 8 6 0 7 9]],
+                            solved_board [[5 3 4 6 7 8 9 1 2]
+                                          [6 7 2 1 9 5 3 4 8]
+                                          [1 9 8 3 4 2 5 6 7]
+                                          [8 5 9 7 6 1 4 2 3]
+                                          [4 2 6 8 5 3 7 9 1]
+                                          [7 1 3 9 2 4 8 5 6]
+                                          [9 6 1 5 3 7 2 8 4]
+                                          [2 8 7 4 1 9 6 3 5]
+                                          [3 4 5 2 8 6 1 7 9]]
+                            time 5
+                            user "Jelena Repac"]
+                        (insert-time board solved_board time user)
+                        )
+                      (let [ response (app-routes (mock/request :get "/best-result"))]
+                        (-> response :status) => 200
+                        (-> response :body) => "{\"user\":\"Jelena Repac\",\"time\":5}"
+                        (-> response :headers ) =>  {"Content-Type" "application/json",
+                                                     "Access-Control-Allow-Origin" "http://localhost:3000",
+                                                     "Access-Control-Allow-Headers" "Content-Type",
+                                                     "Access-Control-Allow-Methods" "GET, POST, OPTIONS",
+                                                     "Access-Control-Allow-Credentials" "true"},
+                        )
+
+                      (jdbc/execute! db-spec ["DELETE FROM results"])
+                      )
+           )
+         (facts "Testing /leaderboard route "
+                (fact "NO results in DB"
+                      (let [ response (app-routes (mock/request :get "/leaderboard"))]
+                        (-> response :status) => 200
+                        (-> response :body) => "{\"first\":null,\"second\":null,\"third\":null}"
+                        (-> response :headers ) =>  {"Content-Type" "application/json",
+                                                     "Access-Control-Allow-Origin" "http://localhost:3000",
+                                                     "Access-Control-Allow-Headers" "Content-Type",
+                                                     "Access-Control-Allow-Methods" "GET, POST, OPTIONS",
+                                                     "Access-Control-Allow-Credentials" "true"},
+                        )
+                      )
+                (fact "With result"
+                      (jdbc/execute! db-spec ["DELETE FROM results"])
+                        (insert-time [[5 3 0 0 7 0 0 0 0]
+                                      [6 0 0 1 9 5 0 0 0]
+                                      [0 9 8 0 0 0 0 6 0]
+                                      [8 0 0 0 6 0 0 0 3]
+                                      [4 0 0 8 0 3 0 0 1]
+                                      [7 0 0 0 2 0 0 0 6]
+                                      [0 6 0 0 0 0 2 8 0]
+                                      [0 0 0 4 1 9 0 0 5]
+                                      [0 0 0 0 8 0 0 7 9]]
+                                     [[5 3 4 6 7 8 9 1 2]
+                                      [6 7 2 1 9 5 3 4 8]
+                                      [1 9 8 3 4 2 5 6 7]
+                                      [8 5 9 7 6 1 4 2 3]
+                                      [4 2 6 8 5 3 7 9 1]
+                                      [7 1 3 9 2 4 8 5 6]
+                                      [9 6 1 5 3 7 2 8 4]
+                                      [2 8 7 4 1 9 6 3 5]
+                                      [3 4 5 2 8 6 1 7 9]]
+                                     10 "user1" )
+                        (insert-time [[5 3 0 0 7 0 0 0 0]
+                                      [6 0 0 1 9 5 0 0 0]
+                                      [0 9 8 0 0 0 0 6 0]
+                                      [8 0 0 0 6 0 0 0 3]
+                                      [4 0 0 8 0 3 0 0 1]
+                                      [7 0 0 0 2 0 0 0 6]
+                                      [0 6 0 0 0 0 2 8 0]
+                                      [0 0 0 4 1 9 0 0 5]
+                                      [0 0 0 0 8 0 0 7 9]]
+                                     [[5 3 4 6 7 8 9 1 2]
+                                      [6 7 2 1 9 5 3 4 8]
+                                      [1 9 8 3 4 2 5 6 7]
+                                      [8 5 9 7 6 1 4 2 3]
+                                      [4 2 6 8 5 3 7 9 1]
+                                      [7 1 3 9 2 4 8 5 6]
+                                      [9 6 1 5 3 7 2 8 4]
+                                      [2 8 7 4 1 9 6 3 5]
+                                      [3 4 5 2 8 6 1 7 9]]
+                                     20 "user2" )
+                        (insert-time [[5 3 0 0 7 0 0 0 0]
+                                      [6 0 0 1 9 5 0 0 0]
+                                      [0 9 8 0 0 0 0 6 0]
+                                      [8 0 0 0 6 0 0 0 3]
+                                      [4 0 0 8 0 3 0 0 1]
+                                      [7 0 0 0 2 0 0 0 6]
+                                      [0 6 0 0 0 0 2 8 0]
+                                      [0 0 0 4 1 9 0 0 5]
+                                      [0 0 0 0 8 0 0 7 9]]
+                                     [[5 3 4 6 7 8 9 1 2]
+                                      [6 7 2 1 9 5 3 4 8]
+                                      [1 9 8 3 4 2 5 6 7]
+                                      [8 5 9 7 6 1 4 2 3]
+                                      [4 2 6 8 5 3 7 9 1]
+                                      [7 1 3 9 2 4 8 5 6]
+                                      [9 6 1 5 3 7 2 8 4]
+                                      [2 8 7 4 1 9 6 3 5]
+                                      [3 4 5 2 8 6 1 7 9]]
+                                     30 "user3" )
+                      (let [response (app-routes (mock/request :get "/leaderboard"))]
+                        (-> response :status) => 200
+                        (-> response :body) => "{\"first\":{\"user\":\"user1\",\"time\":10},\"second\":{\"user\":\"user2\",\"time\":20},\"third\":{\"user\":\"user3\",\"time\":30}}"
+                        (-> response :headers ) =>  {"Content-Type" "application/json",
+                                                     "Access-Control-Allow-Origin" "http://localhost:3000",
+                                                     "Access-Control-Allow-Headers" "Content-Type",
+                                                     "Access-Control-Allow-Methods" "GET, POST, OPTIONS",
+                                                     "Access-Control-Allow-Credentials" "true"},)
+
+
+                      )
+                )
+      )
+
+
+ )
+
+
 
 
 
