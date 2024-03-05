@@ -217,7 +217,7 @@
                                      0)
       => false))
 
-
+;filled-cells-distribution
 (facts
   (fact "Testing filled-cells-distribution with evenly distributed filled cells"
         (let [board [[5 3 4 6 7 8 9 1 2]
@@ -244,3 +244,85 @@
                      [3 4 5 2 8 6 1 7 9]]]
           (filled-cells-distribution board))
         => "Clustered distribution"))
+
+(facts "Testing solve-helper function"
+       (let [board [[5 3 0 0 7 0 0 0 0]
+                    [6 0 0 1 9 5 0 0 0]
+                    [0 9 8 0 0 0 0 6 0]
+                    [8 0 0 0 6 0 0 0 3]
+                    [4 0 0 8 0 3 0 0 1]
+                    [7 0 0 0 2 0 0 0 6]
+                    [0 6 0 0 0 0 2 8 0]
+                    [0 0 0 4 1 9 0 0 5]
+                    [0 0 0 0 8 0 0 7 9]]
+             expected-solution [[5 3 4 6 7 8 9 1 2]
+                                [6 7 2 1 9 5 3 4 8]
+                                [1 9 8 3 4 2 5 6 7]
+                                [8 5 9 7 6 1 4 2 3]
+                                [4 2 6 8 5 3 7 9 1]
+                                [7 1 3 9 2 4 8 5 6]
+                                [9 6 1 5 3 7 2 8 4]
+                                [2 8 7 4 1 9 6 3 5]
+                                [3 4 5 2 8 6 1 7 9]]]
+         (fact "Solving sudoku puzzle with solve-helper"
+               (solve-helper (find-zero-indexes board) 0 board) => expected-solution)))
+
+
+(facts "Testing sudoku-difficulty function"
+       (fact "Very Hard difficulty for 17 filled cells"
+             (sudoku-difficulty [[5 0 0 0 0 0 0 0 0]
+                                 [6 0 0 0 9 0 0 0 0]
+                                 [0 9 8 0 0 0 0 6 0]
+                                 [8 0 0 0 0 0 0 0 3]
+                                 [4 0 0 8 0 3 0 0 1]
+                                 [0 0 0 0 2 0 0 0 6]
+                                 [0 6 0 0 0 0 2 8 0]
+                                 [0 0 0 0 0 9 0 0 0]
+                                 [0 0 0 0 0 0 0 0 0]]) => "Very Hard")
+
+       ;(fact "Hard difficulty for 35 filled cells with even distribution"
+       ;      (sudoku-difficulty [[5 3 4 6 7 8 9 1 2]
+       ;                          [6 7 2 1 9 5 3 4 8]
+       ;                          [1 9 8 3 4 2 5 6 7]
+       ;                          [8 5 9 7 6 1 4 2 3]
+       ;                          [4 2 6 8 5 3 7 9 1]
+       ;                          [7 1 3 9 2 4 8 5 6]
+       ;                          [9 6 1 5 3 7 2 8 4]
+       ;                          [2 8 7 4 1 9 6 3 5]
+       ;                          [3 4 5 2 8 6 1 7 9]]) => "Hard")
+       ;
+       ;(fact "Hard difficulty for 32 filled cells with clustered distribution"
+       ;      (sudoku-difficulty [[5 3 4 6 7 8 9 1 2]
+       ;                          [6 7 2 1 9 5 3 4 8]
+       ;                          [1 9 8 3 4 2 5 6 7]
+       ;                          [8 5 9 7 6 1 4 2 3]
+       ;                          [4 2 6 8 5 3 7 9 1]
+       ;                          [7 1 3 9 2 4 8 5 6]
+       ;                          [9 6 1 5 3 7 2 8 4]
+       ;                          [2 8 7 4 1 9 6 3 5]
+       ;                          [3 0 0 2 8 6 1 7 9]]) => "Hard")
+       ;
+       ;(fact "Medium difficulty for 40 filled cells with clustered distribution"
+       ;      (sudoku-difficulty [[5 3 4 6 7 8 9 1 2]
+       ;                          [6 7 2 1 9 5 3 4 8]
+       ;                          [1 9 8 3 4 2 5 6 7]
+       ;                          [8 5 9 7 6 1 4 2 3]
+       ;                          [4 2 6 8 5 3 7 9 1]
+       ;                          [7 1 3 9 2 4 8 5 6]
+       ;                          [9 6 1 5 3 7 2 8 4]
+       ;                          [2 8 7 4 1 9 6 3 5]
+       ;                          [3 0 0 2 8 6 1 7 0]]) => "Medium")
+
+       (fact "Easy difficulty for 45 filled cells"
+             (sudoku-difficulty [[5 3 4 6 7 8 9 1 2]
+                                 [6 7 2 1 9 5 3 4 8]
+                                 [1 9 0 3 4 2 0 6 7]
+                                 [8 5 9 7 6 1 4 2 3]
+                                 [4 0 6 8 5 3 7 9 1]
+                                 [7 1 3 9 2 4 8 5 6]
+                                 [9 6 1 5 3 7 2 8 4]
+                                 [2 8 7 4 1 9 0 3 5]
+                                 [3 4 5 2 8 6 1 0 9]]) => "Very Easy")
+
+
+       )

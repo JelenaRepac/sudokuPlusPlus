@@ -89,6 +89,7 @@
     <orderEntry type="library" name="Leiningen: ring/ring-defaults:0.4.0" level="project" />
     <orderEntry type="library" name="Leiningen: ring/ring-headers:0.3.0" level="project" />
     <orderEntry type="library" name="Leiningen: ring/ring-jetty-adapter:1.6.3" level="project" />
+    <orderEntry type="library" name="Leiningen: ring/ring-mock:0.4.0" level="project" />
     <orderEntry type="library" name="Leiningen: ring/ring-servlet:1.6.3" level="project" />
     <orderEntry type="library" name="Leiningen: ring/ring-ssl:0.3.0" level="project" />
     <orderEntry type="library" name="Leiningen: slingshot:0.12.2" level="project" />

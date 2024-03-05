@@ -1,4 +1,4 @@
-(ns if-valid_test
+(ns sudoku-solver.if-valid_test
   (:require [midje.sweet :refer :all]
             [sudoku-solver.if-valid :refer :all]))
 

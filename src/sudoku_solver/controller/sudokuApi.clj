@@ -194,21 +194,23 @@
    "Access-Control-Allow-Credentials" "true"})
 
 (defn check-cell-value [request]
-  (let [params (:params request)
-        board (get params "board")
-        row-index (get params "rowIndex" 0)
-        col-index (get params "columnIndex" 0)
-        value (get params "value" 0)
-        result (sudoku-solver.if-valid/cell-valid? board row-index col-index value)]
-    {:status 200
+  (if (empty? request)
+    {:status 400
      :headers {"Content-Type" "application/json"}
-     :body (json/generate-string {:board board
-                                  :rowIndex row-index
-                                  :columnIndex col-index
-                                  :value value
-                                  :result result})}))
-
-
+     :body "error:Missing or invalid request"}
+    (let [params (:params request)
+          board (get params "board")
+          row-index (get params "rowIndex" 0)
+          col-index (get params "columnIndex" 0)
+          value (get params "value" 0)
+          result (sudoku-solver.if-valid/cell-valid? board row-index col-index value)]
+      {:status 200
+       :headers {"Content-Type" "application/json"}
+       :body (json/generate-string {:board board
+                                    :rowIndex row-index
+                                    :columnIndex col-index
+                                    :value value
+                                    :result result})})))
 
 
 (defn enable-cors [handler]
@@ -403,10 +405,10 @@
       (enable-cors)))
 
 (defn -main []
-  (fetch-and-save-sudoku-boards 40)
+  ;(fetch-and-save-sudoku-boards 40)
   (log/info "Starting the server on port 8080")
   (jetty/run-jetty app-routes {:port 8080}))
 
 (-main)
-;(jdbc/query db-spec ["SELECT * FROM results"])
+(jdbc/query db-spec ["SELECT * FROM sudoku_boards"])
 ;(jdbc/execute! db-spec ["DELETE FROM results"])

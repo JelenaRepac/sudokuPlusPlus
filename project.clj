@@ -18,4 +18,5 @@
    [org.clojure/java.jdbc "0.7.12"]
    [mysql/mysql-connector-java "8.0.23"]
    [com.h2database/h2 "1.4.197"]
+   [ring/ring-mock "0.4.0"]
    ])
